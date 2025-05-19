@@ -1,12 +1,13 @@
 import streamlit as st
 from src.utils.text_processing import process_text_file
 from src.services.pinecone_service import PineconeService
-from src.config.settings import METADATA_CATEGORIES
+from src.config.settings import METADATA_CATEGORIES, CATEGORY_KEYWORDS
 from datetime import datetime
 import pandas as pd
 import json
 import traceback
 import io
+import re
 
 def read_file_content(file) -> str:
     """ファイルの内容を適切なエンコーディングで読み込む"""
@@ -99,6 +100,33 @@ def process_csv_file(file):
     except Exception as e:
         raise ValueError(f"CSVファイルの処理に失敗しました: {str(e)}")
 
+def analyze_text_category(text: str) -> tuple:
+    """テキストの内容から大カテゴリと中カテゴリを判断する"""
+    # テキストを小文字に変換
+    text_lower = text.lower()
+    
+    # 大カテゴリの判定
+    main_category_scores = {}
+    for category, data in CATEGORY_KEYWORDS.items():
+        score = sum(1 for keyword in data["keywords"] if keyword in text_lower)
+        main_category_scores[category] = score
+    
+    # 最もスコアの高い大カテゴリを選択
+    main_category = max(main_category_scores.items(), key=lambda x: x[1])[0] if main_category_scores else ""
+    
+    # 中カテゴリの判定
+    sub_category = ""
+    if main_category and main_category in CATEGORY_KEYWORDS:
+        sub_category_scores = {}
+        for sub_cat, keywords in CATEGORY_KEYWORDS[main_category]["sub_categories"].items():
+            score = sum(1 for keyword in keywords if keyword in text_lower)
+            sub_category_scores[sub_cat] = score
+        
+        # 最もスコアの高い中カテゴリを選択
+        sub_category = max(sub_category_scores.items(), key=lambda x: x[1])[0] if sub_category_scores else ""
+    
+    return main_category, sub_category
+
 def render_file_upload(pinecone_service: PineconeService):
     """ファイルアップロード機能のUIを表示"""
     st.title("ファイルアップロード")
@@ -129,44 +157,18 @@ def render_file_upload(pinecone_service: PineconeService):
             # テキストファイルの場合はメタデータ入力フォームを表示
             st.subheader("メタデータ入力")
             
-            # 大カテゴリの選択
-            main_category = st.selectbox(
-                "大カテゴリ",
-                METADATA_CATEGORIES["大カテゴリ"],
-                index=None,
-                placeholder="大カテゴリを選択してください（任意）"
-            )
-            
-            # 中カテゴリの選択（大カテゴリに依存）
-            if main_category:
-                sub_category = st.selectbox(
-                    "中カテゴリ",
-                    METADATA_CATEGORIES["中カテゴリ"][main_category],
-                    index=None,
-                    placeholder="中カテゴリを選択してください（任意）"
-                )
-            else:
-                sub_category = None
-            
             # 市区町村の選択
             city = st.selectbox(
                 "市区町村",
                 METADATA_CATEGORIES["市区町村"],
                 index=None,
-                placeholder="市区町村を選択してください（任意）"
-            )
-            
-            # データ作成日の選択
-            created_date = st.date_input(
-                "データ作成日",
-                value=None,
-                format="YYYY/MM/DD"
+                placeholder="市区町村を選択してください（必須）"
             )
             
             # ソース元の入力
             source = st.text_input(
                 "ソース元",
-                placeholder="ソース元を入力してください（任意）"
+                placeholder="ソース元を入力してください（必須）"
             )
             
             # アップロード日（自動設定）
@@ -174,6 +176,11 @@ def render_file_upload(pinecone_service: PineconeService):
             
             if st.button("データベースに保存"):
                 try:
+                    # 必須項目のチェック
+                    if not all([city, source]):
+                        st.error("市区町村とソース元は必須項目です。")
+                        return
+                        
                     with st.spinner("ファイルを処理中..."):
                         file_content = read_file_content(uploaded_file)
                         chunks = process_text_file(file_content, uploaded_file.name)
@@ -182,13 +189,16 @@ def render_file_upload(pinecone_service: PineconeService):
                         
                         # メタデータを追加
                         for chunk in chunks:
+                            # テキストからカテゴリを自動判断
+                            main_category, sub_category = analyze_text_category(chunk["text"])
+                            
                             chunk["metadata"] = {
-                                "main_category": main_category if main_category else "",
-                                "sub_category": sub_category if sub_category else "",
-                                "city": city if city else "",
-                                "created_date": created_date.isoformat() if created_date else "",
+                                "main_category": main_category,
+                                "sub_category": sub_category,
+                                "city": city,
+                                "created_date": upload_date.isoformat(),
                                 "upload_date": upload_date.isoformat(),
-                                "source": source if source else ""
+                                "source": source
                             }
                             chunk["filename"] = uploaded_file.name
                             chunk["chunk_id"] = chunk["id"]
