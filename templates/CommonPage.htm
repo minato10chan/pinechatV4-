@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>HazardMap Viewer</title>
+  <!-- ホスト側のビルド成果物（react-host）の CSS を直接指定 -->
+  <link rel="stylesheet" href="https://remap.itot.jp/MFtest/react-host/static/css/main.e6c13ad2.css">
+</head>
+<body>
+  <!-- React アプリのマウント先 -->
+  <div id="root"></div>
+
+  <!-- Flask 側から渡す動的データをセット -->
+  <script>
+    window.initialData = {
+      Props: {{ props | tojson }},
+    };
+  </script>
+
+  <!-- ホスト側のビルド成果物（react-host）の JS を直接指定 -->
+  <script src="https://remap.itot.jp/MFtest/react-host/static/js/main.69fda770.js"></script>
+</body>
+</html>
