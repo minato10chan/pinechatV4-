@@ -205,7 +205,7 @@ def process_text_file(file_content, metadata):
     
     # 各チャンクを処理
     processed_chunks = []
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks):
         # カテゴリを分析
         category_result = analyze_text_category(chunk)
         
@@ -217,7 +217,11 @@ def process_text_file(file_content, metadata):
             "creation_date": metadata.get("creation_date", DEFAULT_CREATION_DATE)
         })
         
+        # 一意のIDを生成
+        chunk_id = f"text_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}"
+        
         processed_chunks.append({
+            "id": chunk_id,  # 一意のIDを追加
             "text": chunk,
             "metadata": chunk_metadata,
             "category_result": category_result  # カテゴリ判定結果を追加
