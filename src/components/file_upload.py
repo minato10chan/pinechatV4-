@@ -343,10 +343,13 @@ def process_text_file(file_content: str, metadata: dict) -> List[dict]:
         # チャンクのカテゴリを分析
         category_analysis = analyze_text_category(chunk)
         
+        # チャンクのIDを生成
+        chunk_id = f"{metadata.get('id', 'chunk')}_{i}"
+        
         # チャンクのメタデータを作成
         chunk_metadata = {
-            "id": f"{metadata['id']}_{i}",
-            "chunk_id": f"{metadata['id']}_{i}",
+            "id": chunk_id,
+            "chunk_id": chunk_id,
             "filename": metadata.get("filename", ""),
             "main_category": category_analysis["main_category"],
             "subcategory": category_analysis["subcategory"],
@@ -358,7 +361,7 @@ def process_text_file(file_content: str, metadata: dict) -> List[dict]:
         }
         
         processed_chunks.append({
-            "id": chunk_metadata["id"],
+            "id": chunk_id,
             "text": chunk,
             "metadata": chunk_metadata
         })
@@ -421,11 +424,14 @@ def render_file_upload(pinecone_service: PineconeService):
                         
                     with st.spinner("ファイルを処理中..."):
                         file_content = read_file_content(uploaded_file)
+                        # ファイルの一意のIDを生成
+                        file_id = f"{uploaded_file.name}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
                         chunks = process_text_file(file_content, {
+                            "id": file_id,
                             "municipality": city,
                             "source": source,
                             "creation_date": upload_date.isoformat(),
-                            "filename": uploaded_file.name  # ファイル名を追加
+                            "filename": uploaded_file.name
                         })
                         
                         st.write(f"ファイルを{len(chunks)}個のチャンクに分割しました")
