@@ -8,6 +8,7 @@ import json
 import traceback
 import io
 import re
+from typing import List
 
 # デフォルトの作成日時を設定
 DEFAULT_CREATION_DATE = datetime.now().isoformat()
@@ -159,7 +160,7 @@ def analyze_text_category(text: str) -> dict:
         text (str): 分析するテキスト
     
     Returns:
-        dict: カテゴリ分析結果
+        dict: カテゴリ分析結果（カテゴリと信頼度スコアを含む）
     """
     # カテゴリごとのスコアを初期化
     category_scores = {
@@ -300,54 +301,66 @@ def analyze_text_category(text: str) -> dict:
     if is_timetable:
         return {
             "main_category": "地域特性・街のプロフィール",
-            "subcategory": "交通アクセス"
+            "subcategory": "交通アクセス",
+            "confidence_score": 0.9  # 時刻表の場合は高い信頼度
         }
     
     # 通常の判定
     main_category = max(category_scores.items(), key=lambda x: x[1])[0]
     subcategory = max(subcategory_scores[main_category].items(), key=lambda x: x[1])[0]
     
+    # 信頼度スコアの計算
+    total_score = sum(category_scores.values())
+    if total_score == 0:
+        confidence_score = 0.0
+    else:
+        # 選択されたカテゴリのスコアを全体のスコアで割って信頼度を計算
+        confidence_score = category_scores[main_category] / total_score
+    
     return {
         "main_category": main_category,
-        "subcategory": subcategory
+        "subcategory": subcategory,
+        "confidence_score": confidence_score
     }
 
-def process_text_file(file_content, metadata):
+def process_text_file(file_content: str, metadata: dict) -> List[dict]:
     """
-    テキストファイルを処理する関数
+    テキストファイルを処理してチャンクに分割し、メタデータを付与する関数
+    
+    Args:
+        file_content (str): テキストファイルの内容
+        metadata (dict): メタデータ
+    
+    Returns:
+        List[dict]: チャンクとメタデータのリスト
     """
     # テキストをチャンクに分割
     chunks = split_text_into_chunks(file_content)
     
-    # 各チャンクを処理
+    # 各チャンクにメタデータを付与
     processed_chunks = []
     for i, chunk in enumerate(chunks):
-        # カテゴリを分析
-        category_result = analyze_text_category(chunk)
+        # チャンクのカテゴリを分析
+        category_analysis = analyze_text_category(chunk)
         
-        # 一意のIDを生成
-        chunk_id = f"text_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}"
-        
-        # メタデータを更新（Pineconeの期待する形式に合わせる）
+        # チャンクのメタデータを作成
         chunk_metadata = {
-            "chunk_id": chunk_id,  # ルートレベルのidと同じ値を使用
-            "city": metadata.get("municipality", ""),  # municipalityをcityとして保存
-            "created_date": metadata.get("creation_date", DEFAULT_CREATION_DATE),
-            "facility_name": "",
-            "filename": metadata.get("filename", ""),  # ファイル名を追加
-            "latitude": 0.0,
-            "longitude": 0.0,
-            "main_category": category_result["main_category"],
+            "id": f"{metadata['id']}_{i}",
+            "chunk_id": f"{metadata['id']}_{i}",
+            "filename": metadata.get("filename", ""),
+            "main_category": category_analysis["main_category"],
+            "subcategory": category_analysis["subcategory"],
+            "confidence_score": category_analysis["confidence_score"],
+            "municipality": metadata.get("municipality", ""),
             "source": metadata.get("source", ""),
-            "straight_distance": 0,
-            "sub_category": category_result["subcategory"]  # subcategoryをsub_categoryとして保存
+            "creation_date": metadata.get("creation_date", ""),
+            "upload_date": metadata.get("upload_date", "")
         }
         
         processed_chunks.append({
-            "id": chunk_id,  # ルートレベルのid
+            "id": chunk_metadata["id"],
             "text": chunk,
-            "metadata": chunk_metadata,
-            "category_result": category_result  # カテゴリ判定結果を追加
+            "metadata": chunk_metadata
         })
     
     return processed_chunks
