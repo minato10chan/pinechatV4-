@@ -214,11 +214,10 @@ def process_text_file(file_content, metadata):
         
         # メタデータを更新（Pineconeの期待する形式に合わせる）
         chunk_metadata = {
-            "chunk_id": chunk_id,
             "city": metadata.get("municipality", ""),  # municipalityをcityとして保存
             "created_date": metadata.get("creation_date", DEFAULT_CREATION_DATE),
             "facility_name": "",
-            "filename": "",
+            "filename": metadata.get("filename", ""),  # ファイル名を追加
             "latitude": 0.0,
             "longitude": 0.0,
             "main_category": category_result["main_category"],
@@ -228,7 +227,7 @@ def process_text_file(file_content, metadata):
         }
         
         processed_chunks.append({
-            "id": chunk_id,
+            "id": chunk_id,  # ルートレベルのid
             "text": chunk,
             "metadata": chunk_metadata,
             "category_result": category_result  # カテゴリ判定結果を追加
@@ -295,7 +294,8 @@ def render_file_upload(pinecone_service: PineconeService):
                         chunks = process_text_file(file_content, {
                             "municipality": city,
                             "source": source,
-                            "creation_date": upload_date.isoformat()
+                            "creation_date": upload_date.isoformat(),
+                            "filename": uploaded_file.name  # ファイル名を追加
                         })
                         
                         st.write(f"ファイルを{len(chunks)}個のチャンクに分割しました")
