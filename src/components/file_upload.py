@@ -214,6 +214,7 @@ def process_text_file(file_content, metadata):
         
         # メタデータを更新（Pineconeの期待する形式に合わせる）
         chunk_metadata = {
+            "chunk_id": chunk_id,  # ルートレベルのidと同じ値を使用
             "city": metadata.get("municipality", ""),  # municipalityをcityとして保存
             "created_date": metadata.get("creation_date", DEFAULT_CREATION_DATE),
             "facility_name": "",
@@ -300,20 +301,10 @@ def render_file_upload(pinecone_service: PineconeService):
                         
                         st.write(f"ファイルを{len(chunks)}個のチャンクに分割しました")
                         
-                        # カテゴリ判定結果を表示
-                        st.subheader("カテゴリ判定結果")
-                        for i, chunk in enumerate(chunks, 1):
-                            st.write(f"チャンク {i}:")
-                            st.write(f"メインカテゴリ: {chunk['category_result']['main_category']}")
-                            st.write(f"サブカテゴリ: {chunk['category_result']['subcategory']}")
-                            st.write("---")
-                        
-                        # チャンクの内容を表示
-                        st.subheader("チャンクの内容")
-                        for i, chunk in enumerate(chunks, 1):
-                            st.write(f"チャンク {i}:")
-                            st.text(chunk["text"])
-                            st.write("---")
+                        # デバッグ情報の表示
+                        st.write("メタデータの例:")
+                        if chunks:
+                            st.json(chunks[0]["metadata"])
                         
                         with st.spinner("Pineconeにアップロード中..."):
                             pinecone_service.upload_chunks(chunks)
