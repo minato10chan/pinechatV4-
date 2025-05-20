@@ -431,6 +431,7 @@ def render_file_upload(pinecone_service: PineconeService):
                             "municipality": city,
                             "source": source,
                             "creation_date": upload_date.isoformat(),
+                            "upload_date": upload_date.isoformat(),  # アップロード日を追加
                             "filename": uploaded_file.name
                         })
                         
