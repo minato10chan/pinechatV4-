@@ -151,49 +151,128 @@ def process_csv_file(file):
     except Exception as e:
         raise ValueError(f"CSVファイルの処理に失敗しました: {str(e)}")
 
-def analyze_text_category(text):
+def analyze_text_category(text: str) -> dict:
     """
     テキストの内容からカテゴリを分析する関数
+    
+    Args:
+        text (str): 分析するテキスト
+    
+    Returns:
+        dict: カテゴリ分析結果
     """
-    # 各カテゴリのスコアを初期化
-    category_scores = {category: 0 for category in CATEGORY_KEYWORDS.keys()}
+    # カテゴリごとのスコアを初期化
+    category_scores = {
+        "物件概要": 0,
+        "地域特性・街のプロフィール": 0
+    }
     
-    # 各サブカテゴリのスコアを初期化
-    subcategory_scores = {}
-    for main_category, data in CATEGORY_KEYWORDS.items():
-        for subcategory in data["sub_categories"].keys():
-            subcategory_scores[subcategory] = 0
+    # サブカテゴリごとのスコアを初期化
+    subcategory_scores = {
+        "物件概要": {
+            "概要・エリア区分": 0,
+            "価格・費用": 0,
+            "間取り・設備": 0,
+            "契約・手続き": 0
+        },
+        "地域特性・街のプロフィール": {
+            "概要・エリア区分": 0,
+            "交通アクセス": 0,
+            "街の歴史・地域史": 0,
+            "自然・環境": 0,
+            "観光・グルメ": 0
+        }
+    }
     
-    # テキストを小文字に変換
-    text_lower = text.lower()
+    # テキストを行ごとに分割
+    lines = text.split('\n')
     
-    # 各カテゴリのキーワードをチェック
-    for main_category, data in CATEGORY_KEYWORDS.items():
-        # メインカテゴリのキーワードをチェック
-        for keyword in data["keywords"]:
-            if keyword.lower() in text_lower:
-                category_scores[main_category] += 1
+    # キーワードマッピング
+    keyword_mapping = {
+        "物件概要": {
+            "概要・エリア区分": [
+                "物件", "マンション", "アパート", "一戸建て", "土地", "駐車場",
+                "エリア", "地区", "地域", "区画", "街区", "敷地", "建物",
+                "構造", "階数", "築年数", "新築", "中古", "リフォーム"
+            ],
+            "価格・費用": [
+                "価格", "費用", "家賃", "管理費", "敷金", "礼金", "仲介手数料",
+                "共益費", "光熱費", "水道代", "電気代", "ガス代", "保険料",
+                "税金", "固定資産税", "都市計画税", "修繕積立金", "更新料"
+            ],
+            "間取り・設備": [
+                "間取り", "LDK", "DK", "K", "設備", "家具", "家電", "エアコン",
+                "バス", "トイレ", "キッチン", "洗面所", "収納", "クローゼット",
+                "ベランダ", "バルコニー", "ロフト", "地下室", "屋上", "庭",
+                "駐車場", "駐輪場", "宅配ボックス", "インターホン", "セキュリティ"
+            ],
+            "契約・手続き": [
+                "契約", "入居", "退去", "更新", "手続き", "書類", "保証人",
+                "連帯保証人", "審査", "内見", "申込", "入居審査", "契約書",
+                "重要事項説明", "火災保険", "家財保険", "原状回復", "明渡し"
+            ]
+        },
+        "地域特性・街のプロフィール": {
+            "概要・エリア区分": [
+                "エリア", "地区", "地域", "区画", "街区", "町", "丁目",
+                "住宅地", "商業地", "工業地", "文教地区", "オフィス街",
+                "再開発", "都市計画", "用途地域", "容積率", "建蔽率"
+            ],
+            "交通アクセス": [
+                "JR", "線", "駅", "所要時間", "分", "直通", "運転", "急行", "特急",
+                "バス", "車", "アクセス", "交通", "路線", "新宿", "池袋", "渋谷",
+                "横浜", "大宮", "川越", "本川越", "新木場", "八王子", "海老名",
+                "元町", "中華街", "新横浜", "Fライナー", "小江戸号", "バス停",
+                "高速道路", "IC", "JCT", "空港", "港", "フェリー", "タクシー"
+            ],
+            "街の歴史・地域史": [
+                "歴史", "史跡", "文化財", "重要文化財", "国宝", "遺跡",
+                "城", "神社", "寺院", "仏閣", "古墳", "博物館", "資料館",
+                "伝統", "文化", "祭り", "行事", "風習", "伝説", "物語",
+                "偉人", "人物", "発祥", "起源", "由来", "地名", "街道"
+            ],
+            "自然・環境": [
+                "公園", "緑地", "庭園", "植物園", "森林", "山", "川", "湖",
+                "海", "海岸", "砂浜", "岬", "渓谷", "滝", "温泉", "湧水",
+                "自然", "環境", "生態系", "動植物", "野鳥", "昆虫", "花",
+                "桜", "紅葉", "四季", "気候", "天気", "風", "光", "空気"
+            ],
+            "観光・グルメ": [
+                "観光", "観光地", "名所", "旧跡", "見所", "スポット",
+                "レジャー", "遊園地", "水族館", "動物園", "美術館", "博物館",
+                "ショッピング", "商業施設", "モール", "商店街", "市場",
+                "グルメ", "飲食店", "レストラン", "カフェ", "居酒屋", "バー",
+                "特産品", "名物", "郷土料理", "スイーツ", "お土産", "物産"
+            ]
+        }
+    }
+    
+    # 各行を分析
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
         
-        # サブカテゴリのキーワードをチェック
-        for subcategory, keywords in data["sub_categories"].items():
-            for keyword in keywords:
-                if keyword.lower() in text_lower:
-                    subcategory_scores[subcategory] += 1
+        # 各メインカテゴリとサブカテゴリのキーワードをチェック
+        for main_category, subcategories in keyword_mapping.items():
+            for subcategory, keywords in subcategories.items():
+                # キーワードの出現回数をカウント
+                keyword_count = sum(1 for keyword in keywords if keyword in line)
+                if keyword_count > 0:
+                    # メインカテゴリのスコアを加算
+                    category_scores[main_category] += keyword_count
+                    # サブカテゴリのスコアを加算
+                    subcategory_scores[main_category][subcategory] += keyword_count
     
-    # 最もスコアの高いメインカテゴリを選択
+    # メインカテゴリの決定
     main_category = max(category_scores.items(), key=lambda x: x[1])[0]
     
-    # 最もスコアの高いサブカテゴリを選択
-    subcategory = max(subcategory_scores.items(), key=lambda x: x[1])[0]
+    # サブカテゴリの決定
+    subcategory = max(subcategory_scores[main_category].items(), key=lambda x: x[1])[0]
     
-    # 判定結果を返す
     return {
         "main_category": main_category,
-        "subcategory": subcategory,
-        "scores": {
-            "main_categories": category_scores,
-            "subcategories": subcategory_scores
-        }
+        "subcategory": subcategory
     }
 
 def process_text_file(file_content, metadata):
