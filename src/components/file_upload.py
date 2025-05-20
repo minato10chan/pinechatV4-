@@ -354,10 +354,10 @@ def process_text_file(file_content: str, metadata: dict) -> List[dict]:
             "main_category": category_analysis["main_category"],
             "subcategory": category_analysis["subcategory"],
             "confidence_score": category_analysis["confidence_score"],
-            "municipality": metadata.get("municipality", ""),
+            "city": metadata.get("municipality", ""),  # municipalityをcityに変更
             "source": metadata.get("source", ""),
-            "creation_date": metadata.get("creation_date", ""),
-            "upload_date": metadata.get("upload_date", "")
+            "created_date": metadata.get("creation_date", ""),  # creation_dateをcreated_dateに変更
+            "upload_date": metadata.get("upload_date", datetime.now().isoformat())  # アップロード日時を追加
         }
         
         processed_chunks.append({
@@ -431,7 +431,7 @@ def render_file_upload(pinecone_service: PineconeService):
                             "municipality": city,
                             "source": source,
                             "creation_date": upload_date.isoformat(),
-                            "upload_date": upload_date.isoformat(),  # アップロード日を追加
+                            "upload_date": upload_date.isoformat(),
                             "filename": uploaded_file.name
                         })
                         
