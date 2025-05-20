@@ -137,7 +137,6 @@ class PineconeService:
                         # メタデータの設定（CSVファイルのメタデータを含める）
                         metadata = {
                             "text": chunk["text"],
-                            "chunk_id": chunk["id"],  # チャンクIDを追加
                             "filename": chunk["metadata"].get("filename", ""),  # メタデータからファイル名を取得
                             "main_category": chunk["metadata"].get("main_category", ""),
                             "sub_category": chunk["metadata"].get("sub_category", ""),
