@@ -138,7 +138,6 @@ class PineconeService:
                         metadata = {
                             "text": chunk["text"],
                             "filename": chunk.get("filename", ""),
-                            "chunk_id": chunk.get("chunk_id", ""),
                             "main_category": chunk.get("metadata", {}).get("main_category", ""),
                             "sub_category": chunk.get("metadata", {}).get("sub_category", ""),
                             "city": chunk.get("metadata", {}).get("city", ""),
@@ -301,7 +300,6 @@ class PineconeService:
                     # 必要なメタデータを抽出
                     item = {
                         'filename': metadata.get('filename', ''),
-                        'chunk_id': metadata.get('chunk_id', ''),
                         'main_category': metadata.get('main_category', ''),
                         'sub_category': metadata.get('sub_category', ''),
                         'city': metadata.get('city', ''),
