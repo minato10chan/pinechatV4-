@@ -137,20 +137,21 @@ class PineconeService:
                         # メタデータの設定（CSVファイルのメタデータを含める）
                         metadata = {
                             "text": chunk["text"],
-                            "filename": chunk.get("filename", ""),
-                            "main_category": chunk.get("metadata", {}).get("main_category", ""),
-                            "sub_category": chunk.get("metadata", {}).get("sub_category", ""),
-                            "city": chunk.get("metadata", {}).get("city", ""),
-                            "created_date": chunk.get("metadata", {}).get("created_date", ""),
-                            "upload_date": chunk.get("metadata", {}).get("upload_date", ""),
-                            "source": chunk.get("metadata", {}).get("source", ""),
+                            "chunk_id": chunk["id"],  # チャンクIDを追加
+                            "filename": chunk["metadata"].get("filename", ""),  # メタデータからファイル名を取得
+                            "main_category": chunk["metadata"].get("main_category", ""),
+                            "sub_category": chunk["metadata"].get("sub_category", ""),
+                            "city": chunk["metadata"].get("city", ""),
+                            "created_date": chunk["metadata"].get("created_date", ""),
+                            "upload_date": chunk["metadata"].get("upload_date", ""),
+                            "source": chunk["metadata"].get("source", ""),
                             # CSVファイルのメタデータ
-                            "facility_name": chunk.get("metadata", {}).get("facility_name", ""),
-                            "latitude": chunk.get("metadata", {}).get("latitude", 0.0),
-                            "longitude": chunk.get("metadata", {}).get("longitude", 0.0),
-                            "walking_distance": chunk.get("metadata", {}).get("walking_distance", 0),
-                            "walking_minutes": chunk.get("metadata", {}).get("walking_minutes", 0),
-                            "straight_distance": chunk.get("metadata", {}).get("straight_distance", 0)
+                            "facility_name": chunk["metadata"].get("facility_name", ""),
+                            "latitude": chunk["metadata"].get("latitude", 0.0),
+                            "longitude": chunk["metadata"].get("longitude", 0.0),
+                            "walking_distance": chunk["metadata"].get("walking_distance", 0),
+                            "walking_minutes": chunk["metadata"].get("walking_minutes", 0),
+                            "straight_distance": chunk["metadata"].get("straight_distance", 0)
                         }
                         
                         # デバッグ情報の表示
