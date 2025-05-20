@@ -20,7 +20,7 @@ PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME") or st.secrets.get("index_
 PINECONE_ASSISTANT_NAME = os.getenv("PINECONE_ASSISTANT_NAME") or st.secrets.get("assistant_name")
 
 # Text Processing Settings
-CHUNK_SIZE = 500  # テキストを分割する際の1チャンクあたりの文字数
+CHUNK_SIZE = 1000  # デフォルトのチャンクサイズ（文字数）
 BATCH_SIZE = 100  # Pineconeへのアップロード時のバッチサイズ
 
 # OpenAI Settings

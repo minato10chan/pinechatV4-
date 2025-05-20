@@ -1,13 +1,64 @@
 import streamlit as st
 from src.utils.text_processing import process_text_file
 from src.services.pinecone_service import PineconeService
-from src.config.settings import METADATA_CATEGORIES, CATEGORY_KEYWORDS
+from src.config.settings import METADATA_CATEGORIES, CATEGORY_KEYWORDS, CHUNK_SIZE
 from datetime import datetime
 import pandas as pd
 import json
 import traceback
 import io
 import re
+
+# デフォルトの作成日時を設定
+DEFAULT_CREATION_DATE = datetime.now().isoformat()
+
+def split_text_into_chunks(text: str, max_chunk_size: int = None) -> list:
+    """
+    テキストを適切なサイズのチャンクに分割する関数
+    
+    Args:
+        text (str): 分割するテキスト
+        max_chunk_size (int): チャンクの最大サイズ（文字数）
+    
+    Returns:
+        list: 分割されたテキストチャンクのリスト
+    """
+    # セッション状態からチャンクサイズを取得、なければデフォルト値を使用
+    chunk_size = max_chunk_size or st.session_state.get("chunk_size", CHUNK_SIZE)
+    
+    # テキストが空の場合は空のリストを返す
+    if not text:
+        return []
+    
+    # テキストを行ごとに分割
+    lines = text.split('\n')
+    chunks = []
+    current_chunk = []
+    current_size = 0
+    
+    for line in lines:
+        line = line.strip()
+        if not line:  # 空行をスキップ
+            continue
+            
+        # 現在のチャンクに追加した場合のサイズを計算
+        line_size = len(line)
+        
+        # 現在のチャンクが最大サイズを超える場合は新しいチャンクを開始
+        if current_size + line_size > chunk_size and current_chunk:
+            chunks.append('\n'.join(current_chunk))
+            current_chunk = []
+            current_size = 0
+        
+        # 行を現在のチャンクに追加
+        current_chunk.append(line)
+        current_size += line_size
+    
+    # 最後のチャンクを追加
+    if current_chunk:
+        chunks.append('\n'.join(current_chunk))
+    
+    return chunks
 
 def read_file_content(file) -> str:
     """ファイルの内容を適切なエンコーディングで読み込む"""
@@ -100,32 +151,79 @@ def process_csv_file(file):
     except Exception as e:
         raise ValueError(f"CSVファイルの処理に失敗しました: {str(e)}")
 
-def analyze_text_category(text: str) -> tuple:
-    """テキストの内容から大カテゴリと中カテゴリを判断する"""
+def analyze_text_category(text):
+    """
+    テキストの内容からカテゴリを分析する関数
+    """
+    # 各カテゴリのスコアを初期化
+    category_scores = {category: 0 for category in CATEGORY_KEYWORDS.keys()}
+    
+    # 各サブカテゴリのスコアを初期化
+    subcategory_scores = {}
+    for main_category, data in CATEGORY_KEYWORDS.items():
+        for subcategory in data["sub_categories"].keys():
+            subcategory_scores[subcategory] = 0
+    
     # テキストを小文字に変換
     text_lower = text.lower()
     
-    # 大カテゴリの判定
-    main_category_scores = {}
-    for category, data in CATEGORY_KEYWORDS.items():
-        score = sum(1 for keyword in data["keywords"] if keyword in text_lower)
-        main_category_scores[category] = score
-    
-    # 最もスコアの高い大カテゴリを選択
-    main_category = max(main_category_scores.items(), key=lambda x: x[1])[0] if main_category_scores else ""
-    
-    # 中カテゴリの判定
-    sub_category = ""
-    if main_category and main_category in CATEGORY_KEYWORDS:
-        sub_category_scores = {}
-        for sub_cat, keywords in CATEGORY_KEYWORDS[main_category]["sub_categories"].items():
-            score = sum(1 for keyword in keywords if keyword in text_lower)
-            sub_category_scores[sub_cat] = score
+    # 各カテゴリのキーワードをチェック
+    for main_category, data in CATEGORY_KEYWORDS.items():
+        # メインカテゴリのキーワードをチェック
+        for keyword in data["keywords"]:
+            if keyword.lower() in text_lower:
+                category_scores[main_category] += 1
         
-        # 最もスコアの高い中カテゴリを選択
-        sub_category = max(sub_category_scores.items(), key=lambda x: x[1])[0] if sub_category_scores else ""
+        # サブカテゴリのキーワードをチェック
+        for subcategory, keywords in data["sub_categories"].items():
+            for keyword in keywords:
+                if keyword.lower() in text_lower:
+                    subcategory_scores[subcategory] += 1
     
-    return main_category, sub_category
+    # 最もスコアの高いメインカテゴリを選択
+    main_category = max(category_scores.items(), key=lambda x: x[1])[0]
+    
+    # 最もスコアの高いサブカテゴリを選択
+    subcategory = max(subcategory_scores.items(), key=lambda x: x[1])[0]
+    
+    # 判定結果を返す
+    return {
+        "main_category": main_category,
+        "subcategory": subcategory,
+        "scores": {
+            "main_categories": category_scores,
+            "subcategories": subcategory_scores
+        }
+    }
+
+def process_text_file(file_content, metadata):
+    """
+    テキストファイルを処理する関数
+    """
+    # テキストをチャンクに分割
+    chunks = split_text_into_chunks(file_content)
+    
+    # 各チャンクを処理
+    processed_chunks = []
+    for chunk in chunks:
+        # カテゴリを分析
+        category_result = analyze_text_category(chunk)
+        
+        # メタデータを更新
+        chunk_metadata = metadata.copy()
+        chunk_metadata.update({
+            "main_category": category_result["main_category"],
+            "subcategory": category_result["subcategory"],
+            "creation_date": metadata.get("creation_date", DEFAULT_CREATION_DATE)
+        })
+        
+        processed_chunks.append({
+            "text": chunk,
+            "metadata": chunk_metadata,
+            "category_result": category_result  # カテゴリ判定結果を追加
+        })
+    
+    return processed_chunks
 
 def render_file_upload(pinecone_service: PineconeService):
     """ファイルアップロード機能のUIを表示"""
@@ -183,25 +281,28 @@ def render_file_upload(pinecone_service: PineconeService):
                         
                     with st.spinner("ファイルを処理中..."):
                         file_content = read_file_content(uploaded_file)
-                        chunks = process_text_file(file_content, uploaded_file.name)
+                        chunks = process_text_file(file_content, {
+                            "municipality": city,
+                            "source": source,
+                            "creation_date": upload_date.isoformat()
+                        })
                         
                         st.write(f"ファイルを{len(chunks)}個のチャンクに分割しました")
                         
-                        # メタデータを追加
-                        for chunk in chunks:
-                            # テキストからカテゴリを自動判断
-                            main_category, sub_category = analyze_text_category(chunk["text"])
-                            
-                            chunk["metadata"] = {
-                                "main_category": main_category,
-                                "sub_category": sub_category,
-                                "city": city,
-                                "created_date": upload_date.isoformat(),
-                                "upload_date": upload_date.isoformat(),
-                                "source": source
-                            }
-                            chunk["filename"] = uploaded_file.name
-                            chunk["chunk_id"] = chunk["id"]
+                        # カテゴリ判定結果を表示
+                        st.subheader("カテゴリ判定結果")
+                        for i, chunk in enumerate(chunks, 1):
+                            st.write(f"チャンク {i}:")
+                            st.write(f"メインカテゴリ: {chunk['category_result']['main_category']}")
+                            st.write(f"サブカテゴリ: {chunk['category_result']['subcategory']}")
+                            st.write("---")
+                        
+                        # チャンクの内容を表示
+                        st.subheader("チャンクの内容")
+                        for i, chunk in enumerate(chunks, 1):
+                            st.write(f"チャンク {i}:")
+                            st.text(chunk["text"])
+                            st.write("---")
                         
                         with st.spinner("Pineconeにアップロード中..."):
                             pinecone_service.upload_chunks(chunks)
