@@ -301,7 +301,7 @@ def analyze_text_category(text: str) -> dict:
     if is_timetable:
         return {
             "main_category": "地域特性・街のプロフィール",
-            "subcategory": "交通アクセス",
+            "sub_category": "交通アクセス",
             "confidence_score": 0.9  # 時刻表の場合は高い信頼度
         }
     
@@ -319,7 +319,7 @@ def analyze_text_category(text: str) -> dict:
     
     return {
         "main_category": main_category,
-        "subcategory": subcategory,
+        "sub_category": subcategory,
         "confidence_score": confidence_score
     }
 
@@ -352,12 +352,12 @@ def process_text_file(file_content: str, metadata: dict) -> List[dict]:
             "chunk_id": chunk_id,
             "filename": metadata.get("filename", ""),
             "main_category": category_analysis["main_category"],
-            "subcategory": category_analysis["subcategory"],
+            "sub_category": category_analysis["sub_category"],
             "confidence_score": category_analysis["confidence_score"],
-            "city": metadata.get("municipality", ""),  # municipalityをcityに変更
+            "city": metadata.get("municipality", ""),
             "source": metadata.get("source", ""),
-            "created_date": metadata.get("creation_date", ""),  # creation_dateをcreated_dateに変更
-            "upload_date": metadata.get("upload_date", datetime.now().isoformat())  # アップロード日時を追加
+            "created_date": metadata.get("creation_date", ""),
+            "upload_date": metadata.get("upload_date", datetime.now().isoformat())
         }
         
         processed_chunks.append({
