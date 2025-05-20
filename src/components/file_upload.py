@@ -209,19 +209,26 @@ def process_text_file(file_content, metadata):
         # カテゴリを分析
         category_result = analyze_text_category(chunk)
         
-        # メタデータを更新
-        chunk_metadata = metadata.copy()
-        chunk_metadata.update({
-            "main_category": category_result["main_category"],
-            "subcategory": category_result["subcategory"],
-            "creation_date": metadata.get("creation_date", DEFAULT_CREATION_DATE)
-        })
-        
         # 一意のIDを生成
         chunk_id = f"text_{datetime.now().strftime('%Y%m%d%H%M%S')}_{i}"
         
+        # メタデータを更新（Pineconeの期待する形式に合わせる）
+        chunk_metadata = {
+            "chunk_id": chunk_id,
+            "city": metadata.get("municipality", ""),  # municipalityをcityとして保存
+            "created_date": metadata.get("creation_date", DEFAULT_CREATION_DATE),
+            "facility_name": "",
+            "filename": "",
+            "latitude": 0.0,
+            "longitude": 0.0,
+            "main_category": category_result["main_category"],
+            "source": metadata.get("source", ""),
+            "straight_distance": 0,
+            "sub_category": category_result["subcategory"]  # subcategoryをsub_categoryとして保存
+        }
+        
         processed_chunks.append({
-            "id": chunk_id,  # 一意のIDを追加
+            "id": chunk_id,
             "text": chunk,
             "metadata": chunk_metadata,
             "category_result": category_result  # カテゴリ判定結果を追加
