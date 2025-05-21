@@ -131,6 +131,9 @@ class LangChainService:
         # 質問タイプの追加
         messages.append(("system", f"質問タイプ: {question_type}"))
         
+        # 応答テンプレートの追加
+        messages.append(("system", f"応答形式:\n{response_template}"))
+        
         # ユーザー入力の追加
         messages.append(("human", "{input}"))
         

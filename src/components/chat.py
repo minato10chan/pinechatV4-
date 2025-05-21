@@ -248,23 +248,22 @@ def render_chat(pinecone_service: PineconeService):
                 elif msg["role"] == "assistant":
                     chat_history.append(("ai", msg["content"]))
             
-            # 会話履歴を逆順にして、最新の会話から処理
-            chat_history.reverse()
-            
+            # 応答を生成
             response, details = st.session_state.langchain_service.get_response(
-                prompt,
+                query=prompt,
                 system_prompt=selected_template_data["system_prompt"],
                 response_template=selected_template_data["response_template"],
-                property_info=st.session_state.get("property_info", "物件情報はありません。"),
-                chat_history=chat_history  # 会話履歴を渡す
+                property_info=st.session_state.get("property_info"),
+                chat_history=chat_history
             )
             
             # アシスタントの応答を追加
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": response,
-                "details": details,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "details": details
             })
-        
-        st.rerun() 
+            
+            # 画面を更新
+            st.rerun() 

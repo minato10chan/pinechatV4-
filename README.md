@@ -35,6 +35,7 @@
 - インタラクティブなチャットUI
 - データ可視化（Pandas DataFrame）
 - 設定管理インターフェース
+- React連携機能（Flaskサーバー経由）
 
 ### バックエンド
 - Python
@@ -42,26 +43,40 @@
 - Pinecone（ベクトルデータベース）
 - OpenAI GPT-3.5-turbo（言語モデル）
 - Pandas（データ処理）
+- LangSmith（トレーシングとモニタリング）
+- Janome（日本語形態素解析）
 
 ## ディレクトリ構成
 ```
-src/
-├── components/         # UIコンポーネント
-│   ├── chat.py        # チャット機能
-│   ├── settings.py    # 設定画面
-│   ├── agent.py       # エージェント機能
-│   ├── file_upload.py # ファイルアップロード
-│   └── property_upload.py # 物件情報アップロード
-├── services/          # バックエンドサービス
-│   ├── langchain_service.py  # LangChain統合
-│   ├── pinecone_service.py   # Pinecone操作
-│   ├── question_classifier.py # 質問分類
-│   ├── metadata_processor.py # メタデータ処理
-│   └── response_templates.py # 回答テンプレート
-├── config/            # 設定ファイル
-│   └── settings.py    # 環境設定
-└── pages/             # ページコンポーネント
-    └── Home.py        # ホームページ
+.
+├── src/
+│   ├── components/         # UIコンポーネント
+│   │   ├── chat.py        # チャット機能
+│   │   ├── settings.py    # 設定画面
+│   │   ├── agent.py       # エージェント機能
+│   │   ├── file_upload.py # ファイルアップロード
+│   │   └── property_upload.py # 物件情報アップロード
+│   ├── services/          # バックエンドサービス
+│   │   ├── langchain_service.py  # LangChain統合
+│   │   ├── pinecone_service.py   # Pinecone操作
+│   │   ├── question_classifier.py # 質問分類
+│   │   ├── metadata_processor.py # メタデータ処理
+│   │   └── response_templates.py # 回答テンプレート
+│   ├── config/            # 設定ファイル
+│   │   └── settings.py    # 環境設定
+│   ├── utils/             # ユーティリティ関数
+│   │   └── text_processing.py # テキスト処理ユーティリティ
+│   └── pages/             # ページコンポーネント
+│       └── Home.py        # ホームページ
+├── .streamlit/            # Streamlit設定
+├── templates/             # テンプレートファイル
+├── tests/                 # テストファイル
+├── streamlit_app.py       # メインアプリケーション
+├── reacttest.py          # React連携用Flaskサーバー
+├── test_pinecone.py      # Pineconeテスト
+├── check_pinecone.py     # Pinecone接続確認
+├── prompt_templates.json # プロンプトテンプレート
+└── requirements.txt      # 依存パッケージ
 ```
 
 ## 処理フロー
@@ -85,6 +100,7 @@ src/
 - チャンクサイズ
 - オーバーラップ
 - エンコーディング設定
+- 日本語形態素解析設定
 
 ### 検索設定
 - 類似度閾値
@@ -95,6 +111,7 @@ src/
 - システムプロンプト
 - 応答テンプレート
 - 質問タイプ別テンプレート
+- LangSmithトレーシング設定
 
 ### データベース設定
 - Pinecone接続情報
@@ -106,15 +123,18 @@ src/
    - 必要なパッケージのインストール
    - 環境変数の設定
    - APIキーの設定
+   - LangSmith APIキーの設定
 
 2. アプリケーション起動
    - Streamlitサーバーの起動
+   - Flaskサーバーの起動（React連携用）
    - ブラウザでのアクセス
 
 3. 機能の利用
    - チャット機能
    - ファイルアップロード
    - 設定の調整
+   - トレーシングの確認（LangSmith）
 
 ## 改善計画
 ### 1. プロンプトエンジニアリングの改善
@@ -183,10 +203,12 @@ src/
 
 ## 注意事項
 - OpenAI APIキーとPinecone APIキーが必要です
+- LangSmith APIキーが必要です（トレーシング機能を使用する場合）
 - 大量のデータを処理する場合は、リソース設定に注意が必要です
 - CSVファイルのエンコーディングに注意が必要です
 - 位置情報は適切に管理する必要があります
 - 物件情報はPineconeで管理されます
+- React連携機能を使用する場合は、Flaskサーバーが正常に動作していることを確認してください
 
 ## ライセンス
 このプロジェクトはMITライセンスの下で公開されています。
