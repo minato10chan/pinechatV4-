@@ -50,69 +50,72 @@ class LangChainService:
 
     def get_relevant_context(self, query: str, top_k: int = DEFAULT_TOP_K) -> Tuple[str, List[Dict[str, Any]]]:
         """クエリに関連する文脈を取得"""
-        # クエリのベクトル化
-        query_vector = self.embeddings.embed_query(query)
+        # 類似度検索を実行
+        results = self.vectorstore.similarity_search_with_score(
+            query,
+            k=top_k
+        )
         
-        # より多くの結果を取得して、後でフィルタリング
-        docs = self.vectorstore.similarity_search_with_score(query, k=top_k * 2)
-        
-        # メタデータも検索対象に含める
-        for doc in docs:
-            # メタデータの各フィールドを検索対象に追加
-            metadata_text = []
-            for key, value in doc[0].metadata.items():
-                if isinstance(value, str):
-                    # メタデータの値をテキストに追加
-                    metadata_text.append(f"{key}: {value}")
-            
-            # メタデータをテキストの前に追加
-            if metadata_text:
-                doc[0].page_content = "\n".join(metadata_text) + "\n\n" + doc[0].page_content
-        
-        # スコアでフィルタリング
-        filtered_docs = [
-            doc for doc in docs 
-            if doc[1] >= SIMILARITY_THRESHOLD
-        ][:top_k]  # 上位K件に制限
-        
-        # フィルタリング後の結果が0件の場合は、スコアに関係なく上位K件を使用
-        if not filtered_docs and docs:
-            filtered_docs = docs[:top_k]
-        
-        context_text = "\n".join([doc[0].page_content for doc in filtered_docs])
-        search_details = [
-            {
-                "スコア": round(doc[1], 4),  # 類似度スコアを小数点4桁まで表示
-                "テキスト": doc[0].page_content[:100] + "...",  # テキストの一部を表示
-                "メタデータ": doc[0].metadata,  # メタデータを追加
-                "類似度判断": {
-                    "閾値": SIMILARITY_THRESHOLD,
-                    "閾値以上": doc[1] >= SIMILARITY_THRESHOLD,
-                    "スコア詳細": f"スコア {round(doc[1], 4)} は閾値 {SIMILARITY_THRESHOLD} に対して {'以上' if doc[1] >= SIMILARITY_THRESHOLD else '未満'}",
-                    "理解過程": {
-                        "クエリ": query,
-                        "テキスト": doc[0].page_content,
-                        "類似度計算": {
-                            "スコア": round(doc[1], 4)
-                        }
-                    }
-                }
-            }
-            for doc in filtered_docs
+        # 類似度スコアでフィルタリング
+        filtered_results = [
+            (doc, score) for doc, score in results
+            if score >= SIMILARITY_THRESHOLD
         ]
         
-        print(f"検索クエリ: {query}")  # デバッグ用
-        print(f"検索結果数: {len(filtered_docs)}")  # デバッグ用
-        for detail in search_details:
-            print(f"スコア: {detail['スコア']}, テキスト: {detail['テキスト']}")  # デバッグ用
+        if not filtered_results:
+            return "関連する情報が見つかりませんでした。", []
         
-        return context_text, search_details
+        # 文脈の構築
+        context_parts = []
+        search_details = []
+        
+        for doc, score in filtered_results:
+            # メタデータの取得
+            metadata = doc.metadata if hasattr(doc, 'metadata') else {}
+            
+            # 文脈の追加
+            context_parts.append(f"情報: {doc.page_content}")
+            if metadata:
+                context_parts.append(f"メタデータ: {metadata}")
+            
+            # 検索詳細の記録
+            search_details.append({
+                "content": doc.page_content,
+                "score": score,
+                "metadata": metadata
+            })
+        
+        return "\n\n".join(context_parts), search_details
+
+    def analyze_question_type(self, query: str) -> str:
+        """質問のタイプを分析"""
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """以下の質問のタイプを分析し、最も適切なカテゴリを選択してください。
+利用可能なカテゴリ：
+- facility: 施設に関する質問
+- area: 地域情報に関する質問
+- property: 物件情報に関する質問
+- comparison: 物件比較に関する質問
+- price_analysis: 価格分析に関する質問
+- location: 立地条件に関する質問
+- investment: 投資分析に関する質問
+
+回答は、上記のカテゴリ名のみを返してください。"""),
+            ("human", "{query}")
+        ])
+        
+        chain = prompt | self.llm
+        response = chain.invoke({"query": query})
+        return response.content.strip().lower()
 
     def get_response(self, query: str, system_prompt: str = None, response_template: str = None, property_info: str = None, chat_history: list = None) -> Tuple[str, Dict[str, Any]]:
         """クエリに対する応答を生成"""
         # プロンプトの設定
         system_prompt = system_prompt or self.system_prompt
         response_template = response_template or self.response_template
+        
+        # 質問タイプの分析
+        question_type = self.analyze_question_type(query)
         
         # メッセージリストの作成
         messages = [
@@ -124,6 +127,9 @@ class LangChainService:
         # 物件情報がある場合は追加
         if property_info:
             messages.append(("system", "物件情報:\n{property_info}"))
+        
+        # 質問タイプの追加
+        messages.append(("system", f"質問タイプ: {question_type}"))
         
         # ユーザー入力の追加
         messages.append(("human", "{input}"))
@@ -162,6 +168,7 @@ class LangChainService:
         details = {
             "モデル": "GPT-3.5-turbo",
             "会話履歴": "有効",
+            "質問タイプ": question_type,
             "文脈検索": {
                 "検索結果数": len(search_details),
                 "マッチしたチャンク": search_details
