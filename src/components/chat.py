@@ -254,7 +254,8 @@ def render_chat(pinecone_service: PineconeService):
                 system_prompt=selected_template_data["system_prompt"],
                 response_template=selected_template_data["response_template"],
                 property_info=st.session_state.get("property_info"),
-                chat_history=chat_history
+                chat_history=chat_history,
+                selected_template_data=selected_template_data
             )
             
             # アシスタントの応答を追加

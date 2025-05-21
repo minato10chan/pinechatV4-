@@ -108,7 +108,7 @@ class LangChainService:
         response = chain.invoke({"query": query})
         return response.content.strip().lower()
 
-    def get_response(self, query: str, system_prompt: str = None, response_template: str = None, property_info: str = None, chat_history: list = None) -> Tuple[str, Dict[str, Any]]:
+    def get_response(self, query: str, system_prompt: str = None, response_template: str = None, property_info: str = None, chat_history: list = None, selected_template_data: dict = None) -> Tuple[str, Dict[str, Any]]:
         """クエリに対する応答を生成"""
         # プロンプトの設定
         system_prompt = system_prompt or self.system_prompt
@@ -172,6 +172,7 @@ class LangChainService:
             "モデル": "GPT-3.5-turbo",
             "会話履歴": "有効",
             "質問タイプ": question_type,
+            "回答タイプ": selected_template_data.get("name", "デフォルト") if selected_template_data else "デフォルト",
             "文脈検索": {
                 "検索結果数": len(search_details),
                 "マッチしたチャンク": search_details
