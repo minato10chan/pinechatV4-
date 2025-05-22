@@ -117,6 +117,16 @@ class LangChainService:
         # 質問タイプの分析
         question_type = self.analyze_question_type(query)
         
+        # チャット履歴を制限（最新の5件のみ保持）
+        if chat_history:
+            chat_history = chat_history[-5:]
+            self.message_history.messages = []
+            for role, content in chat_history:
+                if role == "human":
+                    self.message_history.add_user_message(content)
+                elif role == "ai":
+                    self.message_history.add_ai_message(content)
+        
         # メッセージリストの作成
         messages = [
             ("system", system_prompt),
@@ -145,15 +155,6 @@ class LangChainService:
         
         # 関連する文脈を取得
         context, search_details = self.get_relevant_context(query)
-        
-        # チャット履歴を設定
-        if chat_history:
-            self.message_history.messages = []
-            for role, content in chat_history:
-                if role == "human":
-                    self.message_history.add_user_message(content)
-                elif role == "ai":
-                    self.message_history.add_ai_message(content)
         
         # 応答を生成
         response = chain.invoke({
