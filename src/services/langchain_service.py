@@ -65,24 +65,31 @@ class LangChainService:
         if not filtered_results:
             return "関連する情報が見つかりませんでした。", []
         
-        # 文脈の構築
+        # 文脈の構築（上位3件のみ）
         context_parts = []
         search_details = []
         
-        for doc, score in filtered_results:
+        for doc, score in filtered_results[:3]:  # 上位3件のみ使用
             # メタデータの取得
             metadata = doc.metadata if hasattr(doc, 'metadata') else {}
             
-            # 文脈の追加
-            context_parts.append(f"情報: {doc.page_content}")
-            if metadata:
-                context_parts.append(f"メタデータ: {metadata}")
+            # 文脈の追加（簡潔に）
+            content = doc.page_content[:500] if len(doc.page_content) > 500 else doc.page_content  # 500文字に制限
+            context_parts.append(f"情報: {content}")
+            
+            # 重要なメタデータのみを含める
+            important_metadata = {
+                k: v for k, v in metadata.items()
+                if k in ['name', 'category', 'location', 'distance']
+            }
+            if important_metadata:
+                context_parts.append(f"メタデータ: {important_metadata}")
             
             # 検索詳細の記録
             search_details.append({
-                "content": doc.page_content,
+                "content": content,
                 "score": score,
-                "metadata": metadata
+                "metadata": important_metadata
             })
         
         return "\n\n".join(context_parts), search_details
