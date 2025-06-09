@@ -220,7 +220,7 @@ def render_settings(pinecone_service: PineconeService):
                     
                     # ファイルごとにグループ化して集計
                     df_grouped = df.groupby('filename').agg({
-                        'id': 'count',
+                        'filename': 'count',  # ファイル名の出現回数をカウント
                         'main_category': 'first',
                         'sub_category': 'first',
                         'city': 'first',
@@ -232,7 +232,7 @@ def render_settings(pinecone_service: PineconeService):
                     # 列名の日本語対応
                     column_names = {
                         'filename': 'ファイル名',
-                        'id': 'チャンク数',
+                        'filename_count': 'チャンク数',  # カウント結果の列名を変更
                         'main_category': '大カテゴリ',
                         'sub_category': '中カテゴリ',
                         'city': '市区町村',
