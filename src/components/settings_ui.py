@@ -1,4 +1,4 @@
-import streamlit as st
+S3import streamlit as st
 from src.services.pinecone_service import PineconeService
 from src.config.settings import (
     CHUNK_SIZE,
@@ -258,7 +258,12 @@ def render_settings(pinecone_service: PineconeService):
                     st.markdown("##### 📝 チャンクごとの詳細")
                     
                     # メタデータからテキストを取得
-                    df['text_preview'] = df.apply(lambda row: str(row.get('text', ''))[:100] + '...' if len(str(row.get('text', ''))) > 100 else str(row.get('text', '')), axis=1)
+                    df['text_preview'] = df.apply(lambda row: str(row.get('metadata', {}).get('text', ''))[:100] + '...' if len(str(row.get('metadata', {}).get('text', ''))) > 100 else str(row.get('metadata', {}).get('text', '')), axis=1)
+                    
+                    # メタデータから他のフィールドを取得
+                    for field in ['filename', 'main_category', 'sub_category', 'city', 'created_date', 'upload_date', 'source']:
+                        if field not in df.columns:
+                            df[field] = df.apply(lambda row: row.get('metadata', {}).get(field, ''), axis=1)
                     
                     # 日付を簡易表示に変換
                     for date_col in ['created_date', 'upload_date']:
