@@ -259,7 +259,15 @@ def render_settings(pinecone_service: PineconeService):
                     
                     # テキストの一部を表示用に加工
                     if 'text' in df.columns:
-                        df['text_preview'] = df['text'].apply(lambda x: x[:100] + '...' if len(str(x)) > 100 else x)
+                        df['text_preview'] = df['text'].apply(lambda x: str(x)[:100] + '...' if len(str(x)) > 100 else str(x))
+                    else:
+                        # metadataからテキストを取得
+                        df['text_preview'] = df['metadata'].apply(lambda x: str(x.get('text', ''))[:100] + '...' if len(str(x.get('text', ''))) > 100 else str(x.get('text', '')))
+                    
+                    # 日付を簡易表示に変換
+                    for date_col in ['created_date', 'upload_date']:
+                        if date_col in df.columns:
+                            df[date_col] = df[date_col].apply(lambda x: str(x).split()[0] if x else '')
                     
                     # 表示する列を設定
                     display_columns = [
@@ -267,12 +275,12 @@ def render_settings(pinecone_service: PineconeService):
                         'main_category',
                         'sub_category',
                         'city',
-                        'text_preview' if 'text_preview' in df.columns else None,
+                        'text_preview',
                         'created_date',
                         'upload_date',
                         'source'
                     ]
-                    display_columns = [col for col in display_columns if col is not None]
+                    display_columns = [col for col in display_columns if col is not None and col in df.columns]
                     
                     # 列名の日本語対応（詳細表示用）
                     detail_column_names = {
@@ -281,7 +289,7 @@ def render_settings(pinecone_service: PineconeService):
                         'sub_category': '中カテゴリ',
                         'city': '市区町村',
                         'text_preview': 'テキスト（一部）',
-                        'created_date': 'データ作成日',
+                        'created_date': '作成日',
                         'upload_date': 'アップロード日',
                         'source': 'ソース元'
                     }
