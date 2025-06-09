@@ -1,4 +1,4 @@
-S3import streamlit as st
+import streamlit as st
 from src.services.pinecone_service import PineconeService
 from src.config.settings import (
     CHUNK_SIZE,
