@@ -257,13 +257,13 @@ def render_settings(pinecone_service: PineconeService):
                     # チャンクごとの詳細情報を表示
                     st.markdown("##### 📝 チャンクごとの詳細")
                     
-                    # メタデータからテキストを取得
-                    df['text_preview'] = df.apply(lambda row: str(row.get('metadata', {}).get('text', ''))[:100] + '...' if len(str(row.get('metadata', {}).get('text', ''))) > 100 else str(row.get('metadata', {}).get('text', '')), axis=1)
+                    # メタデータからテキストを取得（修正版）
+                    df['text_preview'] = df['text'].apply(lambda x: str(x)[:100] + '...' if len(str(x)) > 100 else str(x))
                     
                     # メタデータから他のフィールドを取得
                     for field in ['filename', 'main_category', 'sub_category', 'city', 'created_date', 'upload_date', 'source']:
                         if field not in df.columns:
-                            df[field] = df.apply(lambda row: row.get('metadata', {}).get(field, ''), axis=1)
+                            df[field] = df[field]  # 直接フィールドにアクセス
                     
                     # 日付を簡易表示に変換
                     for date_col in ['created_date', 'upload_date']:
