@@ -285,10 +285,10 @@ class PineconeService:
     def get_index_data(self) -> List[Dict]:
         """インデックスのデータを取得"""
         try:
-            # デフォルトnamespaceのデータを取得
+            # 全ベクトルを取得
             results = self.index.query(
                 vector=[0] * 1536,  # ダミーベクトル
-                top_k=1000,
+                top_k=10000,  # より多くのデータを取得
                 include_metadata=True,
                 namespace=""
             )
@@ -297,8 +297,9 @@ class PineconeService:
             for match in results.matches:
                 if 'metadata' in match:
                     metadata = match['metadata']
-                    # 必要なメタデータを抽出
+                    # 必要なメタデータを抽出（テキストを含める）
                     item = {
+                        'text': metadata.get('text', ''),  # テキストデータを追加
                         'filename': metadata.get('filename', ''),
                         'main_category': metadata.get('main_category', ''),
                         'sub_category': metadata.get('sub_category', ''),
