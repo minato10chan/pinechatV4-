@@ -188,11 +188,22 @@ def analyze_text_category(text: str) -> dict:
     # テキストを行ごとに分割
     lines = text.split('\n')
     
-    # 時刻表特有のキーワード
+    # 時刻表特有のキーワード（より具体的な表現に）
     timetable_keywords = [
-        "時刻表", "発", "着", "上り", "下り", "平日", "土休日", "号",
+        "時刻表", "発車", "到着", "上り", "下り", "平日", "土休日", "号",
         "始発", "終電", "運行", "ダイヤ", "列車", "電車", "快速", "普通",
-        "各駅停車", "区間", "方面", "行き"
+        "各駅停車", "区間", "方面", "行き", "駅", "バス停", "停留所"
+    ]
+    
+    # 歴史・文化関連のキーワードを追加
+    history_culture_keywords = [
+        "歴史", "史跡", "文化財", "重要文化財", "国宝", "遺跡",
+        "城", "神社", "寺院", "仏閣", "古墳", "博物館", "資料館",
+        "伝統", "文化", "祭り", "行事", "風習", "伝説", "物語",
+        "偉人", "人物", "発祥", "起源", "由来", "地名", "街道",
+        "市制", "施行", "周年", "記念", "制定", "答申", "告示",
+        "和歌", "歌人", "伝説", "逸話", "故事", "由来", "歴史的",
+        "文化的", "伝統的", "風習", "習俗", "慣習", "風俗", "民俗"
     ]
     
     # キーワードマッピング
@@ -232,13 +243,8 @@ def analyze_text_category(text: str) -> dict:
                 "横浜", "大宮", "川越", "本川越", "新木場", "八王子", "海老名",
                 "元町", "中華街", "新横浜", "Fライナー", "小江戸号", "バス停",
                 "高速道路", "IC", "JCT", "空港", "港", "フェリー", "タクシー"
-            ] + timetable_keywords,  # 時刻表特有のキーワードを追加
-            "街の歴史・地域史": [
-                "歴史", "史跡", "文化財", "重要文化財", "国宝", "遺跡",
-                "城", "神社", "寺院", "仏閣", "古墳", "博物館", "資料館",
-                "伝統", "文化", "祭り", "行事", "風習", "伝説", "物語",
-                "偉人", "人物", "発祥", "起源", "由来", "地名", "街道"
-            ],
+            ] + timetable_keywords,
+            "街の歴史・地域史": history_culture_keywords,
             "自然・環境": [
                 "公園", "緑地", "庭園", "植物園", "森林", "山", "川", "湖",
                 "海", "海岸", "砂浜", "岬", "渓谷", "滝", "温泉", "湧水",
@@ -258,13 +264,13 @@ def analyze_text_category(text: str) -> dict:
     # 時刻表判定のためのフラグ
     is_timetable = False
     
-    # 時刻表の特徴的なパターンをチェック
+    # 時刻表の特徴的なパターン（より厳密な条件に）
     timetable_patterns = [
-        r'\d{1,2}:\d{2}',  # 時刻のパターン（例：6:02）
-        r'発|着',          # 発着の表示
-        r'上り|下り',      # 上り下りの表示
-        r'平日|土休日',    # 運行区分
-        r'\d+号'          # 列車番号
+        r'^\d{1,2}:\d{2}$',  # 時刻のパターン（例：6:02）- 行全体が時刻の場合のみ
+        r'発車|到着',        # 発着の表示
+        r'上り|下り',        # 上り下りの表示
+        r'平日|土休日',      # 運行区分
+        r'^\d+号$'          # 列車番号 - 行全体が番号の場合のみ
     ]
     
     # 各行を分析
@@ -273,36 +279,43 @@ def analyze_text_category(text: str) -> dict:
         if not line:
             continue
         
-        # 時刻表特有のキーワードチェック
+        # 歴史・文化関連のキーワードチェック（優先度を上げる）
+        history_culture_count = sum(1 for keyword in history_culture_keywords if keyword in line)
+        if history_culture_count > 0:
+            category_scores["地域特性・街のプロフィール"] += history_culture_count * 2
+            subcategory_scores["地域特性・街のプロフィール"]["街の歴史・地域史"] += history_culture_count * 2
+            continue
+        
+        # 時刻表特有のキーワードチェック（より厳密に）
         if any(keyword in line for keyword in timetable_keywords):
-            is_timetable = True
-            category_scores["地域特性・街のプロフィール"] += 3
-            subcategory_scores["地域特性・街のプロフィール"]["交通アクセス"] += 3
+            # 時刻表のパターンも同時に確認
+            pattern_matches = sum(1 for pattern in timetable_patterns if re.search(pattern, line))
+            if pattern_matches >= 2:  # 2つ以上のパターンが一致した場合のみ
+                is_timetable = True
+                category_scores["地域特性・街のプロフィール"] += 3
+                subcategory_scores["地域特性・街のプロフィール"]["交通アクセス"] += 3
             continue
         
-        # 時刻表のパターンチェック
-        pattern_matches = sum(1 for pattern in timetable_patterns if re.search(pattern, line))
-        if pattern_matches >= 2:  # 2つ以上のパターンが一致した場合
-            is_timetable = True
-            category_scores["地域特性・街のプロフィール"] += 2
-            subcategory_scores["地域特性・街のプロフィール"]["交通アクセス"] += 2
-            continue
-        
-        # 通常のキーワードチェック（時刻表でない場合のみ）
-        if not is_timetable:
-            for main_category, subcategories in keyword_mapping.items():
-                for subcategory, keywords in subcategories.items():
-                    keyword_count = sum(1 for keyword in keywords if keyword in line)
-                    if keyword_count > 0:
-                        category_scores[main_category] += keyword_count
-                        subcategory_scores[main_category][subcategory] += keyword_count
+        # 通常のキーワードチェック
+        for main_category, subcategories in keyword_mapping.items():
+            for subcategory, keywords in subcategories.items():
+                keyword_count = sum(1 for keyword in keywords if keyword in line)
+                if keyword_count > 0:
+                    # サブカテゴリごとに重み付けを調整
+                    weight = 2 if subcategory == "街の歴史・地域史" else 1
+                    category_scores[main_category] += keyword_count * weight
+                    subcategory_scores[main_category][subcategory] += keyword_count * weight
     
-    # 時刻表と判定された場合は、強制的に交通アクセスカテゴリに設定
+    # 時刻表と判定された場合でも、歴史・文化関連のスコアが高い場合はそちらを優先
+    if is_timetable and subcategory_scores["地域特性・街のプロフィール"]["街の歴史・地域史"] > subcategory_scores["地域特性・街のプロフィール"]["交通アクセス"]:
+        is_timetable = False
+    
+    # 時刻表と判定された場合は、交通アクセスカテゴリに設定
     if is_timetable:
         return {
             "main_category": "地域特性・街のプロフィール",
             "sub_category": "交通アクセス",
-            "confidence_score": 0.9  # 時刻表の場合は高い信頼度
+            "confidence_score": 0.9
         }
     
     # 通常の判定
