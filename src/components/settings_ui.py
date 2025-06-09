@@ -257,17 +257,13 @@ def render_settings(pinecone_service: PineconeService):
                     # チャンクごとの詳細情報を表示
                     st.markdown("##### 📝 チャンクごとの詳細")
                     
-                    # テキストの一部を表示用に加工
-                    if 'text' in df.columns:
-                        df['text_preview'] = df['text'].apply(lambda x: str(x)[:100] + '...' if len(str(x)) > 100 else str(x))
-                    else:
-                        # metadataからテキストを取得
-                        df['text_preview'] = df['metadata'].apply(lambda x: str(x.get('text', ''))[:100] + '...' if len(str(x.get('text', ''))) > 100 else str(x.get('text', '')))
+                    # メタデータからテキストを取得
+                    df['text_preview'] = df.apply(lambda row: str(row.get('text', ''))[:100] + '...' if len(str(row.get('text', ''))) > 100 else str(row.get('text', '')), axis=1)
                     
                     # 日付を簡易表示に変換
                     for date_col in ['created_date', 'upload_date']:
                         if date_col in df.columns:
-                            df[date_col] = df[date_col].apply(lambda x: str(x).split()[0] if x else '')
+                            df[date_col] = df[date_col].apply(lambda x: str(x).split('T')[0] if x else '')
                     
                     # 表示する列を設定
                     display_columns = [
@@ -280,7 +276,7 @@ def render_settings(pinecone_service: PineconeService):
                         'upload_date',
                         'source'
                     ]
-                    display_columns = [col for col in display_columns if col is not None and col in df.columns]
+                    display_columns = [col for col in display_columns if col in df.columns]
                     
                     # 列名の日本語対応（詳細表示用）
                     detail_column_names = {
