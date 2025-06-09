@@ -218,7 +218,8 @@ def render_settings(pinecone_service: PineconeService):
                     # データフレームを作成
                     df = pd.DataFrame(data)
                     
-                    # ファイルごとにグループ化して集計
+                    # ファイルごとの集計情報を表示
+                    st.markdown("##### 📊 ファイルごとの集計")
                     df_grouped = df.groupby('filename').agg({
                         'main_category': 'first',
                         'sub_category': 'first',
@@ -246,9 +247,51 @@ def render_settings(pinecone_service: PineconeService):
                     # 列名を日本語に変換
                     df_grouped = df_grouped.rename(columns=column_names)
                     
-                    # データフレームを表示
+                    # 集計データフレームを表示
                     st.dataframe(
                         df_grouped,
+                        hide_index=True,
+                        use_container_width=True
+                    )
+                    
+                    # チャンクごとの詳細情報を表示
+                    st.markdown("##### 📝 チャンクごとの詳細")
+                    
+                    # テキストの一部を表示用に加工
+                    if 'text' in df.columns:
+                        df['text_preview'] = df['text'].apply(lambda x: x[:100] + '...' if len(str(x)) > 100 else x)
+                    
+                    # 表示する列を設定
+                    display_columns = [
+                        'filename',
+                        'main_category',
+                        'sub_category',
+                        'city',
+                        'text_preview' if 'text_preview' in df.columns else None,
+                        'created_date',
+                        'upload_date',
+                        'source'
+                    ]
+                    display_columns = [col for col in display_columns if col is not None]
+                    
+                    # 列名の日本語対応（詳細表示用）
+                    detail_column_names = {
+                        'filename': 'ファイル名',
+                        'main_category': '大カテゴリ',
+                        'sub_category': '中カテゴリ',
+                        'city': '市区町村',
+                        'text_preview': 'テキスト（一部）',
+                        'created_date': 'データ作成日',
+                        'upload_date': 'アップロード日',
+                        'source': 'ソース元'
+                    }
+                    
+                    # 列名を日本語に変換
+                    df_detail = df[display_columns].rename(columns=detail_column_names)
+                    
+                    # 詳細データフレームを表示
+                    st.dataframe(
+                        df_detail,
                         hide_index=True,
                         use_container_width=True
                     )
